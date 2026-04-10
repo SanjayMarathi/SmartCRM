@@ -12,7 +12,7 @@ Manage client leads and sales follow-up process.
 
 ## Backend
 
-- Node.js / Django / Firebase
+- Django and Firebase
 
 ## Expected Output
 
