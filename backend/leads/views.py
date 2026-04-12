@@ -2,8 +2,10 @@ import json
 import os
 from urllib import error, request as urllib_request
 from datetime import datetime
+from django.db import IntegrityError
 
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse
 from django.utils import timezone
@@ -223,6 +225,44 @@ def login_view(request: HttpRequest):
                 "is_staff": user.is_staff,
             }
         }
+    )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def signup_view(request: HttpRequest):
+    data = parse_json_body(request)
+    if data is None:
+        return JsonResponse({"detail": "Invalid JSON payload."}, status=400)
+
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    confirm_password = data.get("confirm_password") or ""
+
+    if not username or not password:
+        return JsonResponse({"detail": "username and password are required."}, status=400)
+
+    if password != confirm_password:
+        return JsonResponse({"detail": "password and confirm_password must match."}, status=400)
+
+    if len(password) < 8:
+        return JsonResponse({"detail": "password must be at least 8 characters."}, status=400)
+
+    try:
+        user = User.objects.create_user(username=username, password=password)
+    except IntegrityError:
+        return JsonResponse({"detail": "Username already exists."}, status=409)
+
+    login(request, user)
+    return JsonResponse(
+        {
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "is_staff": user.is_staff,
+            }
+        },
+        status=201,
     )
 
 
@@ -455,9 +495,12 @@ def ai_chat_view(request: HttpRequest):
     if not user_prompt:
         return JsonResponse({"detail": "prompt is required."}, status=400)
 
-    lead_context = []
-    for lead in Lead.objects.order_by("-updated_at")[:5]:
-        lead_context.append(
+    leads = list(Lead.objects.all())
+    leads_by_value = sorted(leads, key=lambda item: float(item.estimated_value), reverse=True)
+
+    top_leads = []
+    for lead in leads_by_value[:5]:
+        top_leads.append(
             {
                 "company_name": lead.company_name,
                 "stage": lead.stage,
@@ -467,16 +510,61 @@ def ai_chat_view(request: HttpRequest):
             }
         )
 
+    stage_counts = {
+        Lead.STAGE_NEW: 0,
+        Lead.STAGE_QUALIFIED: 0,
+        Lead.STAGE_PROPOSAL: 0,
+        Lead.STAGE_NEGOTIATION: 0,
+        Lead.STAGE_WON: 0,
+        Lead.STAGE_LOST: 0,
+    }
+    total_pipeline_value = 0.0
+    for lead in leads:
+        stage_counts[lead.stage] = stage_counts.get(lead.stage, 0) + 1
+        total_pipeline_value += float(lead.estimated_value or 0)
+
+    highest_lead = None
+    if leads_by_value:
+        lead = leads_by_value[0]
+        highest_lead = {
+            "company_name": lead.company_name,
+            "estimated_value": float(lead.estimated_value),
+            "stage": lead.stage,
+        }
+
+    data_snapshot = {
+        "lead_count": len(leads),
+        "total_pipeline_value": round(total_pipeline_value, 2),
+        "highest_lead": highest_lead,
+        "stage_counts": stage_counts,
+        "top_leads": top_leads,
+    }
+
+    if data_snapshot["lead_count"] == 0:
+        return JsonResponse(
+            {
+                "model": "rule-based",
+                "reply": (
+                    "No leads exist in backend data yet.\n"
+                    "- Highest lead value: Data not available\n"
+                    "- Total pipeline value: 0\n"
+                    "Next step: create at least one lead in backend, then ask again for highest lead value and top opportunities."
+                ),
+            }
+        )
+
     system_prompt = (
-        "You are a concise CRM copilot. Provide practical sales guidance. "
-        "Use short bullets and mention risks and next steps. "
-        "If data is missing, say what to collect next."
+        "You are a CRM copilot that MUST stay grounded in the provided CRM data. "
+        "Use exact numbers and company names from the data snapshot when available. "
+        "NEVER output placeholders like [Insert ...]. "
+        "If a value is missing, explicitly say 'Data not available'. "
+        "Keep response concise with bullets and include concrete next steps."
     )
     compiled_prompt = (
         f"{system_prompt}\n\n"
-        f"Recent lead context:\n{json.dumps(lead_context, ensure_ascii=True)}\n\n"
+        f"CRM data snapshot:\n{json.dumps(data_snapshot, ensure_ascii=True)}\n\n"
         f"User request:\n{user_prompt}\n\n"
-        "Return a compact answer for a sales rep."
+        "Return a compact answer for a sales rep, grounded only in snapshot data."
     )
 
     response_text, err = _call_ollama(compiled_prompt)

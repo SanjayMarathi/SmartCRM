@@ -3,17 +3,18 @@ import { aiApi, authApi, leadApi } from './api'
 import './App.css'
 
 function App() {
-  const [theme, setTheme] = useState('light')
+  const [theme, setTheme] = useState('dark')
   const [screen, setScreen] = useState('landing')
+  const [workspaceView, setWorkspaceView] = useState('pipeline')
   const [user, setUser] = useState(null)
   const [authError, setAuthError] = useState('')
+  const [authMode, setAuthMode] = useState('login')
   const [busy, setBusy] = useState(false)
   const [leads, setLeads] = useState([])
   const [metrics, setMetrics] = useState({ total_value: 0, won_value: 0, conversion_rate: 0 })
   const [aiInsights, setAiInsights] = useState({
-    summary: { lead_count: 0, average_win_probability: 0, expected_revenue: 0, forecast_gap: 0 },
-    top_opportunities: [],
-    at_risk: [],
+    summary: { lead_count: 0, average_win_probability: 0, expected_revenue: 0, forecast_gap: 0, pipeline_value: 0 },
+    all: [],
   })
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiReply, setAiReply] = useState('')
@@ -21,6 +22,7 @@ function App() {
   const [aiChatError, setAiChatError] = useState('')
 
   const [loginForm, setLoginForm] = useState({ username: '', password: '' })
+  const [signupForm, setSignupForm] = useState({ username: '', password: '', confirm_password: '' })
   const [leadForm, setLeadForm] = useState({
     company_name: '',
     contact_name: '',
@@ -36,7 +38,7 @@ function App() {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('smartcrm-theme')
-    const initialTheme = savedTheme || 'light'
+    const initialTheme = savedTheme || 'dark'
     setTheme(initialTheme)
     document.documentElement.setAttribute('data-theme', initialTheme)
   }, [])
@@ -58,9 +60,8 @@ function App() {
     setMetrics(dashboardResponse.metrics || { total_value: 0, won_value: 0, conversion_rate: 0 })
     setAiInsights(
       aiResponse || {
-        summary: { lead_count: 0, average_win_probability: 0, expected_revenue: 0, forecast_gap: 0 },
-        top_opportunities: [],
-        at_risk: [],
+        summary: { lead_count: 0, average_win_probability: 0, expected_revenue: 0, forecast_gap: 0, pipeline_value: 0 },
+        all: [],
       },
     )
   }
@@ -97,10 +98,23 @@ function App() {
   }, [leads])
 
   const totalValue = useMemo(() => leads.reduce((sum, lead) => sum + Number(lead.estimated_value), 0), [leads])
-
   const wonValue = useMemo(() => leads.filter((lead) => lead.stage === 'won').reduce((sum, lead) => sum + Number(lead.estimated_value), 0), [leads])
-
   const conversionRate = leads.length ? Math.round((pipeline.find((item) => item.key === 'won').value / leads.length) * 100) : 0
+  const averageDealSize = leads.length ? totalValue / leads.length : 0
+  const wonCount = pipeline.find((item) => item.key === 'won').value
+  const lostCount = pipeline.find((item) => item.key === 'lost').value
+
+  const sourceBreakdown = useMemo(() => {
+    const grouped = leads.reduce((acc, lead) => {
+      const source = (lead.source || 'Unknown').trim() || 'Unknown'
+      acc[source] = (acc[source] || 0) + 1
+      return acc
+    }, {})
+
+    return Object.entries(grouped)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+  }, [leads])
 
   const toMoney = (amount) =>
     new Intl.NumberFormat('en-US', {
@@ -112,6 +126,7 @@ function App() {
   const openLogin = () => {
     setScreen('login')
     setAuthError('')
+    setAuthMode('login')
   }
 
   const onLogin = async (event) => {
@@ -130,12 +145,31 @@ function App() {
     }
   }
 
+  const onSignup = async (event) => {
+    event.preventDefault()
+    setBusy(true)
+    setAuthError('')
+    try {
+      const response = await authApi.signup(signupForm)
+      setUser(response.user)
+      await loadData()
+      setScreen('workspace')
+      setWorkspaceView('pipeline')
+    } catch (error) {
+      setAuthError(error.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const onLogout = async () => {
     await authApi.logout()
     setUser(null)
     setLeads([])
     setScreen('landing')
+    setWorkspaceView('pipeline')
     setLoginForm({ username: '', password: '' })
+    setSignupForm({ username: '', password: '', confirm_password: '' })
   }
 
   const onCreateLead = async (event) => {
@@ -159,9 +193,18 @@ function App() {
         last_touch: '',
         notes: '',
       })
+      setWorkspaceView('pipeline')
     } finally {
       setBusy(false)
     }
+  }
+
+  const openAiAssistant = () => {
+    setWorkspaceView('ai')
+  }
+
+  const goHome = () => {
+    setWorkspaceView('pipeline')
   }
 
   const onAskAi = async (event) => {
@@ -181,6 +224,38 @@ function App() {
     }
   }
 
+  const WorkspaceTopBar = () => (
+    <header className="topbar">
+      <div className="topbar-left">
+        <button className="square-home" onClick={goHome} type="button" aria-label="Back to home">
+          ←
+        </button>
+        <button className="brand-btn" onClick={goHome} type="button">
+          <span className="brand-logo">S</span>
+          <span>SmartCRM</span>
+        </button>
+      </div>
+
+      <div className="topbar-actions">
+        <button className="top-btn ask-ai-top" onClick={openAiAssistant} type="button">
+          Ask AI
+        </button>
+        <button className="top-btn" onClick={() => setWorkspaceView('create')} type="button">
+          Create Lead
+        </button>
+        <button className="top-btn" onClick={() => setWorkspaceView('reports')} type="button">
+          Reports
+        </button>
+        <button className="top-btn" onClick={onLogout} type="button">
+          Log Out
+        </button>
+        <button className="theme-square" onClick={toggleTheme} type="button" aria-label="Toggle theme">
+          {theme === 'light' ? '☾' : '☀'}
+        </button>
+      </div>
+    </header>
+  )
+
   if (screen === 'landing') {
     return (
       <main className="crm">
@@ -191,32 +266,17 @@ function App() {
               {theme === 'light' ? 'Dark mode' : 'Light mode'}
             </button>
           </div>
-          <h1>Convert more leads with cleaner sales execution.</h1>
+          <h1>Lead Management Workspace</h1>
           <p className="sub">
-            Track opportunities, conversations, and follow-up actions in one operational system.
+            Track leads, move pipeline stages, and monitor conversion with a focused sales workflow.
           </p>
           <div className="hero-actions">
             <button className="cta" onClick={openLogin}>
               Log In
             </button>
-            <span className="hint">Start from the landing page and move straight into your workspace.</span>
+            <span className="hint">Open workspace to access AI pipeline, lead creation, and reports.</span>
           </div>
         </header>
-
-        <section className="stack two-col">
-          <article className="panel">
-            <h2>Sales Workspace</h2>
-            <p className="muted-text">
-              Pipeline cards, current leads, communication history, and reminders for daily execution.
-            </p>
-          </article>
-          <article className="panel">
-            <h2>Lead Intake Interface</h2>
-            <p className="muted-text">
-              A structured form to capture new lead inputs cleanly before the team starts follow-up.
-            </p>
-          </article>
-        </section>
       </main>
     )
   }
@@ -226,38 +286,327 @@ function App() {
       <main className="crm auth-wrap">
         <section className="panel auth-card">
           <p className="kicker">Smart CRM Access</p>
-          <h1>Welcome back</h1>
-          <p className="muted-text">Use your Django user credentials to enter the CRM workspace.</p>
-          <form onSubmit={onLogin} className="form-grid">
+          <h1>{authMode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
+          <p className="muted-text">Choose Login or Signup to access SmartCRM.</p>
+
+          <div className="auth-mode-tabs">
+            <button
+              className={authMode === 'login' ? 'auth-tab active' : 'auth-tab'}
+              onClick={() => {
+                setAuthMode('login')
+                setAuthError('')
+              }}
+              type="button"
+            >
+              Login
+            </button>
+            <button
+              className={authMode === 'signup' ? 'auth-tab active' : 'auth-tab'}
+              onClick={() => {
+                setAuthMode('signup')
+                setAuthError('')
+              }}
+              type="button"
+            >
+              Signup
+            </button>
+          </div>
+
+          {authMode === 'login' ? (
+            <form onSubmit={onLogin} className="form-grid">
+              <label>
+                Username
+                <input
+                  value={loginForm.username}
+                  onChange={(event) => setLoginForm((prev) => ({ ...prev, username: event.target.value }))}
+                  placeholder="e.g. admin"
+                  required
+                />
+              </label>
+              <label>
+                Password
+                <input
+                  value={loginForm.password}
+                  onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
+                  placeholder="Your password"
+                  type="password"
+                  required
+                />
+              </label>
+              {authError && <p className="error">{authError}</p>}
+              <div className="row-actions">
+                <button className="cta" disabled={busy} type="submit">
+                  {busy ? 'Signing in...' : 'Sign In'}
+                </button>
+                <button className="ghost" onClick={() => setScreen('landing')} type="button">
+                  Back
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={onSignup} className="form-grid">
+              <label>
+                Username
+                <input
+                  value={signupForm.username}
+                  onChange={(event) => setSignupForm((prev) => ({ ...prev, username: event.target.value }))}
+                  placeholder="Choose username"
+                  required
+                />
+              </label>
+              <label>
+                Password
+                <input
+                  value={signupForm.password}
+                  onChange={(event) => setSignupForm((prev) => ({ ...prev, password: event.target.value }))}
+                  placeholder="At least 8 characters"
+                  type="password"
+                  required
+                />
+              </label>
+              <label className="full">
+                Confirm Password
+                <input
+                  value={signupForm.confirm_password}
+                  onChange={(event) => setSignupForm((prev) => ({ ...prev, confirm_password: event.target.value }))}
+                  placeholder="Re-enter password"
+                  type="password"
+                  required
+                />
+              </label>
+              {authError && <p className="error">{authError}</p>}
+              <div className="row-actions">
+                <button className="cta" disabled={busy} type="submit">
+                  {busy ? 'Creating account...' : 'Create Account'}
+                </button>
+                <button className="ghost" onClick={() => setScreen('landing')} type="button">
+                  Back
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
+      </main>
+    )
+  }
+
+  if (workspaceView === 'create') {
+    return (
+      <main className="crm">
+        <WorkspaceTopBar />
+
+        <header className="subpage-top panel">
+          <h1>Create Lead</h1>
+          <p className="muted-text">Add a new lead in a dedicated full-page form.</p>
+        </header>
+
+        <section className="panel lead-create-page">
+          <form onSubmit={onCreateLead} className="form-grid">
             <label>
-              Username
+              Company Name
               <input
-                value={loginForm.username}
-                onChange={(event) => setLoginForm((prev) => ({ ...prev, username: event.target.value }))}
-                placeholder="e.g. admin"
                 required
+                value={leadForm.company_name}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, company_name: event.target.value }))}
               />
             </label>
             <label>
-              Password
+              Contact Name
               <input
-                value={loginForm.password}
-                onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
-                placeholder="Your password"
-                type="password"
                 required
+                value={leadForm.contact_name}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, contact_name: event.target.value }))}
               />
             </label>
-            {authError && <p className="error">{authError}</p>}
-            <div className="row-actions">
-              <button className="cta" disabled={busy} type="submit">
-                {busy ? 'Signing in...' : 'Sign In'}
-              </button>
-              <button className="ghost" onClick={() => setScreen('landing')} type="button">
-                Back
-              </button>
-            </div>
+            <label>
+              Contact Email
+              <input
+                type="email"
+                value={leadForm.contact_email}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, contact_email: event.target.value }))}
+              />
+            </label>
+            <label>
+              Contact Phone
+              <input
+                value={leadForm.contact_phone}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, contact_phone: event.target.value }))}
+              />
+            </label>
+            <label>
+              Source
+              <input
+                value={leadForm.source}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, source: event.target.value }))}
+              />
+            </label>
+            <label>
+              Assigned To
+              <input
+                value={leadForm.assigned_to}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, assigned_to: event.target.value }))}
+              />
+            </label>
+            <label>
+              Stage
+              <select
+                value={leadForm.stage}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, stage: event.target.value }))}
+              >
+                <option value="new">New</option>
+                <option value="qualified">Qualified</option>
+                <option value="proposal">Proposal</option>
+                <option value="negotiation">Negotiation</option>
+                <option value="won">Won</option>
+                <option value="lost">Lost</option>
+              </select>
+            </label>
+            <label>
+              Estimated Value
+              <input
+                type="number"
+                min="0"
+                value={leadForm.estimated_value}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, estimated_value: event.target.value }))}
+              />
+            </label>
+            <label>
+              Last Touch
+              <input
+                type="date"
+                value={leadForm.last_touch}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, last_touch: event.target.value }))}
+              />
+            </label>
+            <label className="full">
+              Notes
+              <textarea
+                rows="3"
+                value={leadForm.notes}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, notes: event.target.value }))}
+              />
+            </label>
+            <button className="cta" disabled={busy} type="submit">
+              {busy ? 'Saving...' : 'Create Lead'}
+            </button>
           </form>
+        </section>
+      </main>
+    )
+  }
+
+  if (workspaceView === 'reports') {
+    return (
+      <main className="crm">
+        <WorkspaceTopBar />
+
+        <header className="subpage-top panel">
+          <h1>Conversion Reports</h1>
+          <p className="muted-text">A dedicated analytics page for conversion and source performance.</p>
+        </header>
+
+        <section className="metrics">
+          <article>
+            <h2>Conversion Rate</h2>
+            <p>{metrics.conversion_rate || conversionRate}%</p>
+          </article>
+          <article>
+            <h2>Won Leads</h2>
+            <p>{wonCount}</p>
+          </article>
+          <article>
+            <h2>Avg Deal Size</h2>
+            <p>{toMoney(averageDealSize)}</p>
+          </article>
+        </section>
+
+        <section className="panel">
+          <h2>Conversion Reports Dashboard</h2>
+          <div className="report-grid">
+            <article className="report-card">
+              <span>Expected Revenue</span>
+              <strong>{toMoney(aiInsights.summary.expected_revenue || 0)}</strong>
+            </article>
+            <article className="report-card">
+              <span>Forecast Gap</span>
+              <strong>{toMoney(aiInsights.summary.forecast_gap || 0)}</strong>
+            </article>
+            <article className="report-card">
+              <span>Closed Lost</span>
+              <strong>{lostCount}</strong>
+            </article>
+          </div>
+        </section>
+
+        <section className="two-col">
+          <article className="panel">
+            <h2>Stage Distribution</h2>
+            <ul className="analytic-list">
+              {pipeline.map((item) => (
+                <li key={`stage-${item.key}`}>
+                  <div>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </div>
+                  <progress max={Math.max(leads.length, 1)} value={item.value} />
+                </li>
+              ))}
+            </ul>
+          </article>
+
+          <article className="panel">
+            <h2>Source Analytics</h2>
+            <ul className="analytic-list">
+              {sourceBreakdown.map((item) => (
+                <li key={`source-${item.label}`}>
+                  <div>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </div>
+                  <progress max={Math.max(leads.length, 1)} value={item.value} />
+                </li>
+              ))}
+              {!sourceBreakdown.length && <li className="muted-text">No source data yet.</li>}
+            </ul>
+          </article>
+        </section>
+      </main>
+    )
+  }
+
+  if (workspaceView === 'ai') {
+    return (
+      <main className="crm">
+        <WorkspaceTopBar />
+
+        <header className="subpage-top panel">
+          <h1>Ask AI</h1>
+          <p className="muted-text">Chat with your local CRM assistant in a dedicated page.</p>
+        </header>
+
+        <section className="panel">
+          <h2>Local AI Assistant (Ollama)</h2>
+          <form className="ai-chat-form" onSubmit={onAskAi}>
+            <label>
+              Ask for help with follow-up strategy, risk review, or message drafting
+              <textarea
+                rows="4"
+                value={aiPrompt}
+                onChange={(event) => setAiPrompt(event.target.value)}
+                placeholder="Example: Draft a follow-up email for high-value leads stuck in negotiation"
+              />
+            </label>
+            <button className="cta" disabled={aiChatBusy} type="submit">
+              {aiChatBusy ? 'Thinking...' : 'Ask Local AI'}
+            </button>
+          </form>
+          {aiChatError && <p className="error">{aiChatError}</p>}
+          {aiReply && (
+            <article className="ai-reply">
+              <h3>Assistant Reply</h3>
+              <p>{aiReply}</p>
+            </article>
+          )}
         </section>
       </main>
     )
@@ -265,265 +614,111 @@ function App() {
 
   return (
     <main className="crm">
+      <WorkspaceTopBar />
+
       <header className="hero">
-        <div className="hero-top">
-          <p className="kicker">Smart CRM</p>
-          <div className="row-actions">
-            <button className="theme-toggle" onClick={toggleTheme}>
-              {theme === 'light' ? 'Dark mode' : 'Light mode'}
-            </button>
-            <button className="ghost light" onClick={onLogout}>
-              Log Out ({user?.username})
-            </button>
-          </div>
-        </div>
+        <p className="kicker">Workspace Home</p>
         <h1>Lead Tracking and Follow-Up Workspace</h1>
-        <p className="sub">
-          Capture leads from intake form, then manage them in the pipeline view with measurable conversion data.
-        </p>
+        <p className="sub">Simple navigation for pipeline, lead creation, conversion analytics, and AI chat.</p>
       </header>
 
-      <section className="metrics">
-        <article>
-          <h2>Total Pipeline Value</h2>
-          <p>{toMoney(metrics.total_value || totalValue)}</p>
-        </article>
-        <article>
-          <h2>Won Revenue</h2>
-          <p>{toMoney(metrics.won_value || wonValue)}</p>
-        </article>
-        <article>
-          <h2>Conversion Rate</h2>
-          <p>{metrics.conversion_rate || conversionRate}%</p>
-        </article>
+      <section className="action-hub">
+        <button
+          className={workspaceView === 'create' ? 'hub-btn active' : 'hub-btn'}
+          onClick={() => setWorkspaceView('create')}
+          type="button"
+        >
+          + Create Lead
+        </button>
+        <button
+          className={workspaceView === 'reports' ? 'hub-btn active' : 'hub-btn'}
+          onClick={() => setWorkspaceView('reports')}
+          type="button"
+        >
+          Conversion Reports
+        </button>
       </section>
 
-      <section className="panel">
-        <h2>AI Revenue Forecast</h2>
-        <div className="ai-summary-grid">
-          <article className="ai-chip">
-            <span>Expected Revenue</span>
-            <strong>{toMoney(aiInsights.summary.expected_revenue || 0)}</strong>
-          </article>
-          <article className="ai-chip">
-            <span>Avg Win Probability</span>
-            <strong>{aiInsights.summary.average_win_probability || 0}%</strong>
-          </article>
-          <article className="ai-chip">
-            <span>Forecast Gap</span>
-            <strong>{toMoney(aiInsights.summary.forecast_gap || 0)}</strong>
-          </article>
-        </div>
-      </section>
-
-      <section className="two-col">
-        <article className="panel">
-          <h2>AI Top Opportunities</h2>
-          <ul className="ai-list">
-            {aiInsights.top_opportunities.map((item) => (
-              <li key={`op-${item.lead_id}`}>
-                <div>
-                  <strong>{item.company_name}</strong>
-                  <span className={`risk-pill ${item.risk_level}`}>{item.risk_level} risk</span>
-                </div>
-                <p>
-                  Win {item.win_probability}% • Expected {toMoney(item.expected_value)}
-                </p>
-                <small>{item.next_action}</small>
-              </li>
-            ))}
-          </ul>
-        </article>
-
-        <article className="panel">
-          <h2>AI Follow-Up Priorities</h2>
-          <ul className="ai-list">
-            {aiInsights.at_risk.map((item) => (
-              <li key={`risk-${item.lead_id}`}>
-                <div>
-                  <strong>{item.company_name}</strong>
-                  <span className={`risk-pill ${item.risk_level}`}>{item.risk_level} risk</span>
-                </div>
-                <p>
-                  Stage: {item.stage} • Last touch: {item.days_since_touch == null ? 'N/A' : `${item.days_since_touch}d ago`}
-                </p>
-                <small>{item.next_action}</small>
-              </li>
-            ))}
-          </ul>
-        </article>
-      </section>
-
-      <section className="panel">
-        <h2>Local AI Assistant (Ollama)</h2>
-        <form className="ai-chat-form" onSubmit={onAskAi}>
-          <label>
-            Ask for help with follow-up strategy, risk review, or message drafting
-            <textarea
-              rows="3"
-              value={aiPrompt}
-              onChange={(event) => setAiPrompt(event.target.value)}
-              placeholder="Example: Draft a follow-up email for high-value leads stuck in negotiation"
-            />
-          </label>
-          <button className="cta" disabled={aiChatBusy} type="submit">
-            {aiChatBusy ? 'Thinking...' : 'Ask Local AI'}
-          </button>
-        </form>
-        {aiChatError && <p className="error">{aiChatError}</p>}
-        {aiReply && (
-          <article className="ai-reply">
-            <h3>Assistant Reply</h3>
-            <p>{aiReply}</p>
-          </article>
-        )}
-      </section>
-
-      <section className="panel">
-        <h2>Lead Pipeline</h2>
-        <div className="pipeline-grid">
-          {pipeline.map((item) => (
-            <div key={item.label} className="pipeline-card">
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
+      {workspaceView === 'pipeline' && (
+        <>
+          <section className="panel">
+            <h2>AI Lead Pipeline</h2>
+            <div className="ai-summary-grid">
+              <article className="ai-chip">
+                <span>Expected Revenue</span>
+                <strong>{toMoney(aiInsights.summary.expected_revenue || 0)}</strong>
+              </article>
+              <article className="ai-chip">
+                <span>Avg Win Probability</span>
+                <strong>{aiInsights.summary.average_win_probability || 0}%</strong>
+              </article>
+              <article className="ai-chip">
+                <span>Pipeline Value</span>
+                <strong>{toMoney(aiInsights.summary.pipeline_value || metrics.total_value || totalValue)}</strong>
+              </article>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel">
-        <h2>Lead Intake Interface</h2>
-        <form onSubmit={onCreateLead} className="form-grid">
-          <label>
-            Company Name
-            <input
-              required
-              value={leadForm.company_name}
-              onChange={(event) => setLeadForm((prev) => ({ ...prev, company_name: event.target.value }))}
-            />
-          </label>
-          <label>
-            Contact Name
-            <input
-              required
-              value={leadForm.contact_name}
-              onChange={(event) => setLeadForm((prev) => ({ ...prev, contact_name: event.target.value }))}
-            />
-          </label>
-          <label>
-            Contact Email
-            <input
-              type="email"
-              value={leadForm.contact_email}
-              onChange={(event) => setLeadForm((prev) => ({ ...prev, contact_email: event.target.value }))}
-            />
-          </label>
-          <label>
-            Contact Phone
-            <input
-              value={leadForm.contact_phone}
-              onChange={(event) => setLeadForm((prev) => ({ ...prev, contact_phone: event.target.value }))}
-            />
-          </label>
-          <label>
-            Source
-            <input
-              value={leadForm.source}
-              onChange={(event) => setLeadForm((prev) => ({ ...prev, source: event.target.value }))}
-            />
-          </label>
-          <label>
-            Assigned To
-            <input
-              value={leadForm.assigned_to}
-              onChange={(event) => setLeadForm((prev) => ({ ...prev, assigned_to: event.target.value }))}
-            />
-          </label>
-          <label>
-            Stage
-            <select
-              value={leadForm.stage}
-              onChange={(event) => setLeadForm((prev) => ({ ...prev, stage: event.target.value }))}
-            >
-              <option value="new">New</option>
-              <option value="qualified">Qualified</option>
-              <option value="proposal">Proposal</option>
-              <option value="negotiation">Negotiation</option>
-              <option value="won">Won</option>
-              <option value="lost">Lost</option>
-            </select>
-          </label>
-          <label>
-            Estimated Value
-            <input
-              type="number"
-              min="0"
-              value={leadForm.estimated_value}
-              onChange={(event) => setLeadForm((prev) => ({ ...prev, estimated_value: event.target.value }))}
-            />
-          </label>
-          <label>
-            Last Touch
-            <input
-              type="date"
-              value={leadForm.last_touch}
-              onChange={(event) => setLeadForm((prev) => ({ ...prev, last_touch: event.target.value }))}
-            />
-          </label>
-          <label className="full">
-            Notes
-            <textarea
-              rows="3"
-              value={leadForm.notes}
-              onChange={(event) => setLeadForm((prev) => ({ ...prev, notes: event.target.value }))}
-            />
-          </label>
-          <button className="cta" disabled={busy} type="submit">
-            {busy ? 'Saving...' : 'Create Lead'}
-          </button>
-        </form>
-      </section>
-
-      <section className="panel">
-        <h2>Leads</h2>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Contact</th>
-                <th>Stage</th>
-                <th>Value</th>
-                <th>Last Touch</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((lead) => (
-                <tr key={lead.id}>
-                  <td>
-                    <strong>{lead.company_name}</strong>
-                    <small>#{lead.id}</small>
-                  </td>
-                  <td>{lead.contact_name}</td>
-                  <td>
-                    <span className={`tag ${lead.stage}`}>{lead.stage}</span>
-                  </td>
-                  <td>{toMoney(lead.estimated_value)}</td>
-                  <td>{lead.last_touch || '-'}</td>
-                </tr>
+            <div className="ai-pipeline-grid">
+              {(aiInsights.all || []).slice(0, 8).map((item) => (
+                <article key={`ai-${item.lead_id}`} className="ai-pipeline-card">
+                  <div>
+                    <strong>{item.company_name}</strong>
+                    <span className={`risk-pill ${item.risk_level}`}>{item.risk_level}</span>
+                  </div>
+                  <p>Win chance: {item.win_probability}%</p>
+                  <small>{item.next_action}</small>
+                </article>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              {!aiInsights.all?.length && <p className="muted-text">Create leads to see AI pipeline insights.</p>}
+            </div>
+          </section>
 
-      <footer className="panel footer">
-        <h2>Conversion Report Snapshot</h2>
-        <p>
-          <strong>{pipeline.find((item) => item.key === 'won').value}</strong> out of{' '}
-          <strong>{leads.length}</strong> leads are closed-won this cycle.
-        </p>
-      </footer>
+          <section className="panel">
+            <h2>Lead Pipeline</h2>
+            <div className="pipeline-grid">
+              {pipeline.map((item) => (
+                <div key={item.label} className="pipeline-card">
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="panel">
+            <h2>Leads</h2>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Company</th>
+                    <th>Contact</th>
+                    <th>Stage</th>
+                    <th>Value</th>
+                    <th>Last Touch</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leads.map((lead) => (
+                    <tr key={lead.id}>
+                      <td>
+                        <strong>{lead.company_name}</strong>
+                        <small>#{lead.id}</small>
+                      </td>
+                      <td>{lead.contact_name}</td>
+                      <td>
+                        <span className={`tag ${lead.stage}`}>{lead.stage}</span>
+                      </td>
+                      <td>{toMoney(lead.estimated_value)}</td>
+                      <td>{lead.last_touch || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+        </>
+      )}
     </main>
   )
 }

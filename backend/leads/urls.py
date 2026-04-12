@@ -10,9 +10,11 @@ from .views import (
     login_view,
     logout_view,
     session_view,
+    signup_view,
 )
 
 urlpatterns = [
+    path("auth/signup/", signup_view, name="signup"),
     path("auth/login/", login_view, name="login"),
     path("auth/logout/", logout_view, name="logout"),
     path("auth/session/", session_view, name="session"),
