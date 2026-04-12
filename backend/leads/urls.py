@@ -14,9 +14,13 @@ from .views import (
 )
 
 urlpatterns = [
+    path("auth/signup", signup_view),
     path("auth/signup/", signup_view, name="signup"),
+    path("auth/login", login_view),
     path("auth/login/", login_view, name="login"),
+    path("auth/logout", logout_view),
     path("auth/logout/", logout_view, name="logout"),
+    path("auth/session", session_view),
     path("auth/session/", session_view, name="session"),
     path("dashboard/", dashboard_view, name="dashboard"),
     path("ai/insights/", ai_insights_view, name="ai-insights"),

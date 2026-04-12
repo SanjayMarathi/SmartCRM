@@ -25,6 +25,65 @@ STAGE_PROBABILITY = {
 }
 
 
+def seed_demo_leads_if_empty():
+    if Lead.objects.exists():
+        return
+
+    demo_leads = [
+        {
+            "company_name": "Acme Corp",
+            "contact_name": "Wile Coyote",
+            "contact_email": "wile@acme.com",
+            "contact_phone": "555-0199",
+            "source": "Referral",
+            "stage": Lead.STAGE_PROPOSAL,
+            "estimated_value": 50000,
+            "assigned_to": "admin",
+            "last_touch": timezone.now().date(),
+            "notes": "Asked for proposal revisions and implementation timeline.",
+        },
+        {
+            "company_name": "Stark Industries",
+            "contact_name": "Tony Stark",
+            "contact_email": "tony@stark.com",
+            "contact_phone": "555-0200",
+            "source": "Website",
+            "stage": Lead.STAGE_NEGOTIATION,
+            "estimated_value": 1200000,
+            "assigned_to": "admin",
+            "last_touch": timezone.now().date(),
+            "notes": "Procurement review in progress; security questionnaire pending.",
+        },
+        {
+            "company_name": "Wayne Enterprises",
+            "contact_name": "Bruce Wayne",
+            "contact_email": "bruce@wayne.com",
+            "contact_phone": "555-0300",
+            "source": "Direct",
+            "stage": Lead.STAGE_WON,
+            "estimated_value": 850000,
+            "assigned_to": "admin",
+            "last_touch": timezone.now().date(),
+            "notes": "Deal closed. Kickoff scheduled for next sprint.",
+        },
+        {
+            "company_name": "Oscorp",
+            "contact_name": "Norman Osborn",
+            "contact_email": "norman@oscorp.com",
+            "contact_phone": "555-0500",
+            "source": "Organic Search",
+            "stage": Lead.STAGE_QUALIFIED,
+            "estimated_value": 400000,
+            "assigned_to": "admin",
+            "last_touch": timezone.now().date(),
+            "notes": "Qualified lead. Technical demo requested for decision committee.",
+        },
+    ]
+
+    for item in demo_leads:
+        Lead.objects.create(**item)
+
+
 def _clamp(value: float, lower: float, upper: float):
     return max(lower, min(upper, value))
 
@@ -295,6 +354,7 @@ def session_view(request: HttpRequest):
 @csrf_exempt
 def leads_collection_view(request: HttpRequest):
     if request.method == "GET":
+        seed_demo_leads_if_empty()
         leads = Lead.objects.order_by("-created_at")
         return JsonResponse({"items": [serialize_lead(lead) for lead in leads]})
 
