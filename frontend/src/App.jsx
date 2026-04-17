@@ -20,6 +20,9 @@ function App() {
   const [aiReply, setAiReply] = useState('')
   const [aiChatBusy, setAiChatBusy] = useState(false)
   const [aiChatError, setAiChatError] = useState('')
+  const [stageDrafts, setStageDrafts] = useState({})
+  const [updatingLeadId, setUpdatingLeadId] = useState(null)
+  const [stageUpdateError, setStageUpdateError] = useState('')
 
   const [loginForm, setLoginForm] = useState({ username: '', password: '' })
   const [signupForm, setSignupForm] = useState({ username: '', password: '', confirm_password: '' })
@@ -114,6 +117,14 @@ function App() {
     return Object.entries(grouped)
       .map(([label, value]) => ({ label, value }))
       .sort((a, b) => b.value - a.value)
+  }, [leads])
+
+  useEffect(() => {
+    const drafts = {}
+    leads.forEach((lead) => {
+      drafts[lead.id] = lead.stage
+    })
+    setStageDrafts(drafts)
   }, [leads])
 
   const toMoney = (amount) =>
@@ -221,6 +232,25 @@ function App() {
       setAiChatError(error.message || 'Could not fetch AI response')
     } finally {
       setAiChatBusy(false)
+    }
+  }
+
+  const onUpdateLeadStage = async (leadId) => {
+    const nextStage = stageDrafts[leadId]
+    const currentLead = leads.find((item) => item.id === leadId)
+    if (!currentLead || !nextStage || nextStage === currentLead.stage) {
+      return
+    }
+
+    setStageUpdateError('')
+    setUpdatingLeadId(leadId)
+    try {
+      await leadApi.update(leadId, { stage: nextStage })
+      await loadData()
+    } catch (error) {
+      setStageUpdateError(error.message || 'Could not update lead stage')
+    } finally {
+      setUpdatingLeadId(null)
     }
   }
 
@@ -695,6 +725,7 @@ function App() {
                     <th>Stage</th>
                     <th>Value</th>
                     <th>Last Touch</th>
+                    <th>Move Stage</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -710,11 +741,45 @@ function App() {
                       </td>
                       <td>{toMoney(lead.estimated_value)}</td>
                       <td>{lead.last_touch || '-'}</td>
+                      <td>
+                        <div className="stage-actions">
+                          <select
+                            className="stage-select"
+                            value={stageDrafts[lead.id] || lead.stage}
+                            onChange={(event) =>
+                              setStageDrafts((prev) => ({
+                                ...prev,
+                                [lead.id]: event.target.value,
+                              }))
+                            }
+                            aria-label={`Change stage for ${lead.company_name}`}
+                          >
+                            <option value="new">New</option>
+                            <option value="qualified">Qualified</option>
+                            <option value="proposal">Proposal</option>
+                            <option value="negotiation">Negotiation</option>
+                            <option value="won">Won</option>
+                            <option value="lost">Lost</option>
+                          </select>
+                          <button
+                            type="button"
+                            className="stage-save"
+                            onClick={() => onUpdateLeadStage(lead.id)}
+                            disabled={
+                              updatingLeadId === lead.id ||
+                              (stageDrafts[lead.id] || lead.stage) === lead.stage
+                            }
+                          >
+                            {updatingLeadId === lead.id ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            {stageUpdateError && <p className="error">{stageUpdateError}</p>}
           </section>
 
         </>

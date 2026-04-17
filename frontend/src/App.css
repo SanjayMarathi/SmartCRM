@@ -341,9 +341,9 @@
 }
 
 .hub-btn {
-  border: 1px solid #2e343d;
-  background: #171c23;
-  color: #d1d5db;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
   padding: 1rem 1.2rem;
   border-radius: 0.9rem;
   font-size: 1.02rem;
@@ -355,6 +355,16 @@
 .hub-btn.active {
   background: rgba(34, 197, 94, 0.16);
   border-color: #22c55e;
+  color: var(--text);
+}
+
+:root[data-theme='dark'] .hub-btn {
+  border-color: #2e343d;
+  background: #171c23;
+  color: #d1d5db;
+}
+
+:root[data-theme='dark'] .hub-btn.active {
   color: #bbf7d0;
 }
 
@@ -486,7 +496,7 @@
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 700px;
+  min-width: 860px;
 }
 
 th,
@@ -548,6 +558,32 @@ td small {
 .tag.lost {
   background: #f5d0d0;
   color: #7f1d1d;
+}
+
+.stage-actions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.stage-select {
+  min-width: 8rem;
+  margin: 0;
+}
+
+.stage-save {
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.4rem 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stage-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .two-col {

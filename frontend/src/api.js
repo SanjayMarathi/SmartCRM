@@ -69,6 +69,13 @@ export const leadApi = {
         });
     },
 
+    update: async (leadId, payload) => {
+        return apiRequest(`/leads/${leadId}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+        });
+    },
+
     dashboard: async () => {
         return apiRequest('/dashboard/', { method: 'GET' });
     },
