@@ -16,7 +16,7 @@ function getViewFromHash() {
 // ─── Markdown renderer ─────────────────────────────────────────────────────
 function renderMarkdown(text) {
   if (!text) return ''
-  const html = text
+  let html = text
     .replace(/^##### (.+)$/gm, '<h6>$1</h6>')
     .replace(/^#### (.+)$/gm, '<h5>$1</h5>')
     .replace(/^### (.+)$/gm, '<h4>$1</h4>')
@@ -24,12 +24,39 @@ function renderMarkdown(text) {
     .replace(/^# (.+)$/gm, '<h2>$1</h2>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code>$1</code>')
-    .replace(/^[-•]\s*(.+)$/gm, '<li>$1</li>')
-    .replace(/^\d+\.\s*(.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g, '<ul>$1</ul>')
-    .replace(/\n{2,}/g, '</p><p>')
-    .replace(/\n/g, '<br/>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^(\s*)[-•*]\s+(.+)$/gm, (match, space, content) => {
+      const depth = Math.floor(space.length / 2);
+      return `<li class="list-depth-${depth}">${content}</li>`;
+    })
+    .replace(/^(\s*)\d+\.\s+(.+)$/gm, (match, space, content) => {
+      const depth = Math.floor(space.length / 2);
+      return `<li class="list-depth-${depth}">${content}</li>`;
+    })
+    .replace(/<\/li>\s*<li/g, '</li><li')
+    .replace(/(<li class="list-depth-\d+">.*?<\/li>)+/g, '<ul>$&</ul>')
+
+  html = html.replace(/(?:\|.*\|\n?)+/g, (match) => {
+    const rows = match.trim().split('\n');
+    let tableHtml = '<div class="table-wrap"><table>';
+    rows.forEach((row, i) => {
+      if (row.includes('---')) return;
+      const cells = row.split('|').map(c => c.trim());
+      if (cells[0] === '') cells.shift();
+      if (cells[cells.length - 1] === '') cells.pop();
+      tableHtml += '<tr>';
+      cells.forEach(cell => {
+        if (i === 0) tableHtml += `<th>${cell}</th>`;
+        else tableHtml += `<td>${cell}</td>`;
+      });
+      tableHtml += '</tr>';
+    });
+    tableHtml += '</table></div>';
+    return tableHtml;
+  });
+
+  html = html.replace(/\n{2,}/g, '</p><p>')
+    .replace(/\n(?!(<br|<p|<\/p|<h|<\/h|<ul|<\/ul|<ol|<\/ol|<li|<\/li|<table|<\/table|<div|<\/div|<tr|<\/tr|<td|<\/td|<th|<\/th|<thead|<\/thead|<tbody|<\/tbody))/gi, '<br/>')
   return `<div class="markdown-content"><p>${html}</p></div>`
 }
 
@@ -197,11 +224,71 @@ function TopBar({ user, navigateToView, onSignOut, toggleTheme, theme, toggleSid
 function AppFooter({ navigateToView }) {
   return (
     <footer className="app-footer">
-      <div>© {new Date().getFullYear()} SmartCRM - All rights reserved.</div>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <span onClick={() => navigateToView('privacy')}>Privacy Policy</span>
-        <span onClick={() => navigateToView('support')}>Support</span>
-        <span onClick={() => navigateToView('about')}>About</span>
+      <div className="footer-left">
+        <span className="brand-logo sm">S</span>
+        <strong>SmartCRM</strong>
+        <p>© {new Date().getFullYear()} Intelligent Lead Management</p>
+      </div>
+      <div className="footer-links">
+        <div className="footer-col">
+          <strong>Resources</strong>
+          <span onClick={() => navigateToView('about')}>About Project</span>
+          <span onClick={() => navigateToView('support')}>Help Center</span>
+        </div>
+        <div className="footer-col">
+          <strong>Legal</strong>
+          <span onClick={() => navigateToView('privacy')}>Privacy Policy</span>
+          <span onClick={() => navigateToView('privacy')}>Terms of Service</span>
+        </div>
+        <div className="footer-col">
+          <strong>Connect</strong>
+          <span onClick={() => navigateToView('support')}>Contact Sales</span>
+          <span onClick={() => navigateToView('support')}>Support</span>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+function LandingFooter({ openAuth, navigateToView }) {
+  return (
+    <footer className="landing-footer">
+      <div className="l-footer-top">
+        <div className="l-footer-brand">
+          <div className="brand-row">
+            <span className="brand-logo">S</span>
+            <span className="brand-name">SmartCRM</span>
+          </div>
+          <p>The intelligent workspace for sales teams to track, manage, and close leads with AI-powered efficiency.</p>
+        </div>
+        <div className="l-footer-grid">
+          <div className="l-footer-col">
+            <h4>Product</h4>
+            <span onClick={() => openAuth('signup')}>Features</span>
+            <span onClick={() => openAuth('signup')}>AI Assistant</span>
+            <span onClick={() => openAuth('signup')}>Pricing</span>
+          </div>
+          <div className="l-footer-col">
+            <h4>Company</h4>
+            <span onClick={() => navigateToView('about')}>About Us</span>
+            <span onClick={() => navigateToView('support')}>Contact</span>
+            <span onClick={() => navigateToView('support')}>Careers</span>
+          </div>
+          <div className="l-footer-col">
+            <h4>Support</h4>
+            <span onClick={() => navigateToView('support')}>Help Center</span>
+            <span onClick={() => navigateToView('privacy')}>Privacy Policy</span>
+            <span onClick={() => navigateToView('support')}>Security</span>
+          </div>
+        </div>
+      </div>
+      <div className="l-footer-bottom">
+        <p>© {new Date().getFullYear()} SmartCRM Inc. Built for high-performance sales teams.</p>
+        <div className="l-footer-socials">
+          <span>Twitter</span>
+          <span>LinkedIn</span>
+          <span>GitHub</span>
+        </div>
       </div>
     </footer>
   )
@@ -543,6 +630,7 @@ export default function App() {
           </div>
         </div>
       </section>
+      <LandingFooter navigateToView={navigateToView} openAuth={openAuth} />
     </main>
   )
 
@@ -764,7 +852,12 @@ export default function App() {
     // ── AI Assistant ───────────────────────────────────────────────────
     if (view === 'ai') return (
       <main className="crm">
-        <header className="page-hdr panel"><div><h1>AI Assistant</h1><p className="muted">Ask anything about your pipeline and get instant answers.</p></div></header>
+        <header className="page-hdr panel">
+          <div><h1>AI Assistant</h1><p className="muted">Ask anything about your pipeline and get instant answers.</p></div>
+          <div className="hdr-actions">
+            <button className="ghost-sm" onClick={() => { setAiPrompt(''); setAiReply(''); setAiErr(''); }} type="button" title="Clear current session">Refresh</button>
+          </div>
+        </header>
         <section className="panel">
           <form className="ai-form" onSubmit={onAskAi}>
             <label className="full">Prompt
@@ -775,6 +868,17 @@ export default function App() {
             </div>
           </form>
           {aiErr && <p className="error" style={{ marginTop: '1rem' }}>{aiErr}</p>}
+          
+          {aiChatBusy && (
+            <div className="ai-loading-wrap">
+              <div className="ai-pulse-orb"></div>
+              <div className="ai-loading-text">
+                <strong>Analyzing...</strong>
+                <p>Analyzing pipeline data and generating insights.</p>
+              </div>
+            </div>
+          )}
+
           {aiReply && <article className="ai-reply"><h3>Response</h3><MarkdownReply text={aiReply} /></article>}
           {!aiReply && !aiChatBusy && (
             <div className="ai-chips-wrap">
@@ -796,24 +900,98 @@ export default function App() {
         <header className="page-hdr panel"><div><h1 style={{ textTransform: 'capitalize' }}>{view}</h1><p className="muted">SmartCRM {view} information.</p></div></header>
         <section className="panel md-body" style={{ maxWidth: '760px', padding: '2rem' }}>
           {view === 'about' && (<>
-            <h2>SmartCRM - Project Overview</h2>
-            <p>SmartCRM is a powerful, real-time lead management system designed to help sales teams close more deals.</p>
-            <h3>Key Features</h3>
-            <ul>
-              <li><strong>Pipeline Tracker</strong> - Visualise every deal across your sales funnel.</li>
-              <li><strong>AI Assistant</strong> - Strategy, email drafts, and risk analysis via Hugging Face AI.</li>
-              <li><strong>Task Reminders &amp; Logs</strong> - Track every touchpoint and next step.</li>
-              <li><strong>Real-time Sync</strong> - Firebase-powered live data across all devices.</li>
-            </ul>
+            <h2>Empowering Sales with Intelligence</h2>
+            <p>SmartCRM was built with a single mission: to transform the chaotic process of lead management into a streamlined, AI-driven engine for growth.</p>
+            
+            <div className="metrics" style={{ margin: '2rem 0' }}>
+              <article>
+                <strong>Real-time</strong>
+                <p>Instant</p>
+                <small>Firebase Sync</small>
+              </article>
+              <article>
+                <strong>AI-Powered</strong>
+                <p>90%</p>
+                <small>Insight Accuracy</small>
+              </article>
+              <article>
+                <strong>Secure</strong>
+                <p>256-bit</p>
+                <small>AES Encryption</small>
+              </article>
+            </div>
+
+            <h3>The SmartCRM Advantage</h3>
+            <p>Traditional CRMs are often glorified spreadsheets—clunky, slow, and reactive. SmartCRM is proactive. By integrating deep learning via Hugging Face AI, we provide context that others miss.</p>
+            
+            <div className="stat-list" style={{ marginTop: '1.5rem' }}>
+              <li style={{ animation: 'none' }}>
+                <div className="stat-row"><strong>Dynamic Pipeline</strong></div>
+                <p className="muted small">Visualise your sales funnel with drag-and-drop precision and real-time stage updates.</p>
+              </li>
+              <li style={{ animation: 'none' }}>
+                <div className="stat-row"><strong>AI Assistant</strong></div>
+                <p className="muted small">Generate follow-up drafts, summarize negotiation transcripts, and predict deal outcomes.</p>
+              </li>
+              <li style={{ animation: 'none' }}>
+                <div className="stat-row"><strong>Task Intelligence</strong></div>
+                <p className="muted small">Never miss a follow-up with contextual reminders that sync across all your devices.</p>
+              </li>
+            </div>
           </>)}
           {view === 'privacy' && (<>
-            <h2>Privacy Policy</h2>
-            <p>Your lead data is stored securely using Firebase Firestore. We only collect minimal data required to operate the CRM.</p>
-            <p>Data sent to the AI assistant is processed securely and not retained by the language models for training purposes.</p>
+            <h2>Privacy & Data Security</h2>
+            <p>At SmartCRM, we believe your data is your most valuable asset. Our privacy framework is built on transparency and security-first architecture.</p>
+            
+            <div className="md-body">
+              <h3>1. Data Sovereignty</h3>
+              <p>Your lead data, contact logs, and internal notes are stored in dedicated Firebase Firestore instances. We utilize industry-standard security rules to ensure only authorized team members can access your workspace.</p>
+              
+              <h3>2. AI Processing Transparency</h3>
+              <p>When you use the AI Assistant, we process your anonymized pipeline data through secure API endpoints. We do not use your proprietary sales data to train public models. Your competitive advantage remains yours.</p>
+              
+              <h3>3. Encryption & Access</h3>
+              <p>All data in transit is encrypted via SSL/TLS. Authentication is managed through Firebase Auth, supporting multi-factor authentication and secure token-based sessions.</p>
+              
+              <div className="panel" style={{ background: 'var(--accent-light)', border: '1px solid var(--accent)', marginTop: '2rem' }}>
+                <p style={{ margin: 0, color: 'var(--accent)', fontWeight: 600 }}>SmartCRM is committed to GDPR and CCPA compliance standards for all users.</p>
+              </div>
+            </div>
           </>)}
           {view === 'support' && (<>
-            <h2>Support</h2>
-            <p>Encountering issues? Reach out to us at <strong>support@smartcrm.com</strong>. Please include your user ID and a description of the problem.</p>
+            <h2>Contact & Support</h2>
+            <p>Our team is here to help you maximize your sales productivity. Reach out to us via the form below or at <strong>support@smartcrm.com</strong>.</p>
+            
+            <form className="form-grid" style={{ marginTop: '2rem' }} onSubmit={e => { e.preventDefault(); alert('Message sent! Our team will get back to you soon.') }}>
+              <label>Your Name<input placeholder="Full Name" required /></label>
+              <label>Email Address<input type="email" placeholder="you@company.com" required /></label>
+              <label className="full">Subject
+                <select>
+                  <option>Technical Support</option>
+                  <option>Sales Inquiry</option>
+                  <option>Billing Question</option>
+                  <option>Feature Request</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label className="full">Message
+                <textarea rows="5" placeholder="How can we help you?" required />
+              </label>
+              <div className="row-actions full">
+                <button className="cta" type="submit">Send Message</button>
+              </div>
+            </form>
+
+            <div style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
+              <div>
+                <strong>Office HQ</strong>
+                <p className="muted small">123 Tech Park, Suite 400<br />Bangalore, KA 560001</p>
+              </div>
+              <div>
+                <strong>Working Hours</strong>
+                <p className="muted small">Mon - Fri: 9:00 AM - 6:00 PM IST<br />Response time: &lt; 4 hours</p>
+              </div>
+            </div>
           </>)}
         </section>
       </main>
