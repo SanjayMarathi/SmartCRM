@@ -84,7 +84,7 @@ function downloadCSV(leads) {
 function downloadPDF(leads, metrics) {
   const fmt = n => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SmartCRM Report</title>
-<style>body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:2cm}h1{font-size:20px;color:#10B981;margin-bottom:4px}.sub{color:#666;margin-bottom:20px;font-size:11px}.kpis{display:flex;gap:32px;margin-bottom:24px}.kpi{border:1px solid #ddd;border-radius:6px;padding:10px 16px;min-width:120px}.kpi-label{font-size:10px;color:#888;text-transform:uppercase}.kpi-val{font-size:18px;font-weight:bold;margin-top:2px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#666;border-bottom:2px solid #ddd}td{padding:6px 8px;border-bottom:1px solid #eee;font-size:11px}.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:bold}.won{background:#d1fae5;color:#065f46}.lost{background:#fee2e2;color:#991b1b}.new{background:#dbeafe;color:#1e40af}.proposal{background:#fef3c7;color:#92400e}.negotiation{background:#ffedd5;color:#9a3412}.qualified{background:#d1fae5;color:#065f46}</style>
+<style>body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:2cm}h1{font-size:20px;color:#10B981;margin-bottom:4px}.sub{color:#666;margin-bottom:20px;font-size:11px}.kpis{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:24px}.kpi{flex:1;box-sizing:border-box;border:1px solid #ddd;border-radius:6px;padding:10px 16px;min-width:120px}.kpi-label{font-size:10px;color:#888;text-transform:uppercase}.kpi-val{font-size:18px;font-weight:bold;margin-top:2px}table{width:100%;border-collapse:collapse;border:1px solid #000;color:#000}th,td{border:1px solid #000;padding:6px 8px;text-align:right}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3),th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){text-align:left}th{font-size:11px;font-weight:bold}td{font-size:11px}.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:bold}.won{background:#d1fae5;color:#065f46}.lost{background:#fee2e2;color:#991b1b}.new{background:#dbeafe;color:#1e40af}.proposal{background:#fef3c7;color:#92400e}.negotiation{background:#ffedd5;color:#9a3412}.qualified{background:#d1fae5;color:#065f46}</style>
 </head><body>
 <h1>SmartCRM - Lead Report</h1>
 <p class="sub">Generated ${new Date().toLocaleString()} · ${leads.length} leads</p>
@@ -278,7 +278,7 @@ function PublicPageContent({ view }) {
         </div>
 
         <h3>The SmartCRM Advantage</h3>
-        <p>Traditional CRMs are often glorified spreadsheets — clunky, slow, and reactive. SmartCRM is proactive. By integrating deep learning via Hugging Face AI, we provide context that others miss.</p>
+        <p>Traditional CRMs are often glorified spreadsheets - clunky, slow, and reactive. SmartCRM is proactive. By integrating deep learning via Hugging Face AI, we provide context that others miss.</p>
 
         <div className="stat-list" style={{ marginTop: '1.5rem' }}>
           <li style={{ animation: 'none' }}>
@@ -336,7 +336,7 @@ function PublicPageContent({ view }) {
         <div className="stat-list" style={{ marginTop: '1rem' }}>
           <li style={{ animation: 'none' }}>
             <div className="stat-row"><strong>Technical Issues</strong></div>
-            <p className="muted small">Bugs, broken features, login problems, or data sync issues — send us a detailed description and we&#39;ll investigate promptly.</p>
+            <p className="muted small">Bugs, broken features, login problems, or data sync issues - send us a detailed description and we&#39;ll investigate promptly.</p>
           </li>
           <li style={{ animation: 'none' }}>
             <div className="stat-row"><strong>Feature Requests</strong></div>
