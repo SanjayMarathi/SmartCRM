@@ -17,7 +17,6 @@ import {
     serverTimestamp,
     updateDoc,
     where,
-    getDocs,
 } from 'firebase/firestore'
 
 // ── Firebase init ─────────────────────────────────────────────────────────
@@ -100,7 +99,7 @@ export const authApi = {
         return onAuthStateChanged(firebaseAuth, callback)
     },
 
-    async signIn(payload) {
+    async login(payload) {
         // The sign-in form now sends email directly
         const email = String(payload.email || payload.username || '').trim()
         if (!email) throw new Error('Email is required.')
@@ -117,7 +116,7 @@ export const authApi = {
         }
     },
 
-    async signUp(payload) {
+    async register(payload) {
         const email = payload.email || normalizeEmail(payload.username || '')
         if (!email || !payload.password) throw new Error('Email and password are required.')
         if (payload.password !== payload.confirm_password) throw new Error('Passwords do not match.')
@@ -133,7 +132,7 @@ export const authApi = {
         }
     },
 
-    async signOut() {
+    async logout() {
         await signOut(firebaseAuth)
     },
 

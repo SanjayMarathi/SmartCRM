@@ -8,9 +8,24 @@ const WORKSPACE_VIEWS = new Set([
 ])
 const VIEW_ORDER = ['pipeline', 'create', 'edit', 'reports', 'reminders', 'logs', 'ai', 'about', 'privacy', 'support']
 
+// All route names used across screens (public + workspace)
+const ALL_ROUTES = new Set([...WORKSPACE_VIEWS, 'login', 'register'])
+
+function getHashRoute() {
+  return (window.location.hash || '').replace(/^#\/?/, '')
+}
+
 function getViewFromHash() {
-  const cleaned = (window.location.hash || '').replace(/^#\/?/, '')
-  return WORKSPACE_VIEWS.has(cleaned) ? cleaned : 'pipeline'
+  const route = getHashRoute()
+  return WORKSPACE_VIEWS.has(route) ? route : 'pipeline'
+}
+
+function getInitialPublicState() {
+  const route = getHashRoute()
+  if (route === 'login') return { screen: 'auth', authMode: 'login', publicView: null }
+  if (route === 'register') return { screen: 'auth', authMode: 'register', publicView: null }
+  if (['about', 'privacy', 'support'].includes(route)) return { screen: 'landing', authMode: 'login', publicView: route }
+  return { screen: 'landing', authMode: 'login', publicView: null }
 }
 
 // ─── Markdown renderer ─────────────────────────────────────────────────────
@@ -212,7 +227,7 @@ function TopBar({ user, navigateToView, onSignOut, toggleTheme, theme, toggleSid
       <div className="topbar-actions">
         <button className="new-lead-btn" onClick={() => navigateToView('create')} type="button">+ New Lead</button>
         <span className="user-chip" title={user?.email}>{user?.username?.[0]?.toUpperCase() || 'U'}</span>
-        <button className="nav-btn signout-btn" onClick={onSignOut} type="button">Sign Out</button>
+        <button className="nav-btn signout-btn" onClick={onSignOut} type="button">Logout</button>
         <button className="theme-sq" onClick={toggleTheme} type="button" aria-label="Toggle theme">
           {theme === 'light' ? '☾' : '☀'}
         </button>
@@ -362,7 +377,7 @@ function PublicPageContent({ view }) {
   )
 }
 
-function LandingFooter({ openAuth, navigateToView, openPublicView }) {
+function LandingFooter({ openAuth, openPublicView }) {
   // Social links configured via VITE_SOCIAL_* env vars (optional)
 
   return (
@@ -378,9 +393,9 @@ function LandingFooter({ openAuth, navigateToView, openPublicView }) {
         <div className="l-footer-grid">
           <div className="l-footer-col">
             <h4>Product</h4>
-            <span onClick={() => openAuth('signup')}>Features</span>
-            <span onClick={() => openAuth('signup')}>AI Assistant</span>
-            <span onClick={() => openAuth('signup')}>Get Started</span>
+            <span onClick={() => openAuth('register')}>Features</span>
+            <span onClick={() => openAuth('register')}>AI Assistant</span>
+            <span onClick={() => openAuth('register')}>Get Started</span>
           </div>
           <div className="l-footer-col">
             <h4>Company</h4>
@@ -414,7 +429,7 @@ export default function App() {
   const [view, setView] = useState(getViewFromHash)
   const [viewAnim, setViewAnim] = useState('flip-forward')
   const [user, setUser] = useState(null)
-  const [authMode, setAuthMode] = useState('signin')
+  const [authMode, setAuthMode] = useState('login')
   const [authError, setAuthError] = useState('')
   const [busy, setBusy] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -476,7 +491,7 @@ export default function App() {
   // ── Page title ─────────────────────────────────────────────────────────
   useEffect(() => {
     const TITLES = { pipeline: 'Dashboard', create: 'New Lead', edit: 'Edit Lead', reports: 'Analytics', reminders: 'Reminders', logs: 'Logs', ai: 'AI Assistant', about: 'About', support: 'Support', privacy: 'Privacy' }
-    const base = { loading: 'SmartCRM', landing: 'SmartCRM – Intelligent Lead Management', auth: authMode === 'signin' ? 'Sign In – SmartCRM' : 'Create Account – SmartCRM', workspace: (TITLES[view] || view) + ' – SmartCRM' }
+    const base = { loading: 'SmartCRM', landing: 'SmartCRM – Intelligent Lead Management', auth: authMode === 'login' ? 'Login – SmartCRM' : 'Register – SmartCRM', workspace: (TITLES[view] || view) + ' – SmartCRM' }
     document.title = base[screen] || 'SmartCRM'
   }, [screen, view, authMode])
 
@@ -489,32 +504,56 @@ export default function App() {
         setScreen('workspace')
         startLeadsSubscription()
       } else {
-        setUser(null); setAllLeads([]); stopLeadsSubscription(); setScreen('landing')
+        setUser(null); setAllLeads([]); stopLeadsSubscription(); 
+        const pubState = getInitialPublicState();
+        setScreen(pubState.screen);
+        setAuthMode(pubState.authMode);
+        setPublicView(pubState.publicView);
       }
     })
   }, [])
 
   // ── Hash routing ───────────────────────────────────────────────────────
   useEffect(() => {
-    const handle = () => {
-      const next = getViewFromHash()
-      setView(prev => {
-        if (prev === next) return prev
-        const currIdx = VIEW_ORDER.indexOf(prev)
-        const nextIdx = VIEW_ORDER.indexOf(next)
-        setViewAnim(nextIdx >= currIdx ? 'flip-forward' : 'flip-back')
-        return next
-      })
+    const handleHashChange = () => {
+      const route = getHashRoute()
+      if (user) {
+        // Logged in: workspace views
+        if (WORKSPACE_VIEWS.has(route)) {
+          setView(prev => {
+            if (prev === route) return prev
+            const currIdx = VIEW_ORDER.indexOf(prev)
+            const nextIdx = VIEW_ORDER.indexOf(route)
+            setViewAnim(nextIdx >= currIdx ? 'flip-forward' : 'flip-back')
+            return route
+          })
+        }
+      } else {
+        // Not logged in: public routes
+        const pubState = getInitialPublicState()
+        setScreen(pubState.screen)
+        setAuthMode(pubState.authMode)
+        setPublicView(pubState.publicView)
+      }
     }
-    window.addEventListener('hashchange', handle)
-    return () => window.removeEventListener('hashchange', handle)
-  }, [])
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [user])
 
   useEffect(() => {
-    if (screen !== 'workspace') return
-    const next = `#/${view}`
-    if (window.location.hash !== next) window.history.replaceState(null, '', next)
-  }, [screen, view])
+    if (screen === 'loading') return
+    let nextHash = '#/'
+    if (screen === 'workspace') {
+      nextHash = `#/${view}`
+    } else if (screen === 'auth') {
+      nextHash = authMode === 'login' ? '#/login' : '#/register'
+    } else if (screen === 'landing') {
+      nextHash = publicView ? `#/${publicView}` : '#/'
+    }
+    if (window.location.hash !== nextHash) {
+      window.history.pushState(null, '', nextHash)
+    }
+  }, [screen, view, authMode, publicView])
 
   // ── Leads real-time ────────────────────────────────────────────────────
   function startLeadsSubscription() {
@@ -571,7 +610,7 @@ export default function App() {
   }, [leads])
 
   // ── Auth handlers ──────────────────────────────────────────────────────
-  const openAuth = (mode = 'signin') => { setAuthMode(mode); setAuthError(''); setScreen('auth') }
+  const openAuth = (mode = 'login') => { setAuthMode(mode); setAuthError(''); setScreen('auth') }
 
   const friendlyErr = msg => {
     if (msg.includes('invalid-credential') || msg.includes('wrong-password') || msg.includes('user-not-found')) return 'Incorrect email or password.'
@@ -582,22 +621,22 @@ export default function App() {
     return msg
   }
 
-  const onSignIn = async e => {
+  const onLogin = async e => {
     e.preventDefault(); setBusy(true); setAuthError('')
-    try { await authApi.signIn(loginForm) }
+    try { await authApi.login(loginForm) }
     catch (err) { setAuthError(friendlyErr(err.message)) }
     finally { setBusy(false) }
   }
 
-  const onSignUp = async e => {
+  const onRegister = async e => {
     e.preventDefault(); setBusy(true); setAuthError('')
-    try { await authApi.signUp({ ...signupForm }) }
+    try { await authApi.register({ ...signupForm }) }
     catch (err) { setAuthError(friendlyErr(err.message)) }
     finally { setBusy(false) }
   }
 
   const onSignOut = async () => {
-    await authApi.signOut()
+    await authApi.logout()
     setAllLeads([]); navigateToView('pipeline')
     setLoginForm({ username: '', password: '' })
     setSignupForm({ username: '', email: '', password: '', confirm_password: '' })
@@ -701,8 +740,8 @@ export default function App() {
         </div>
         <div className="landing-nav-actions">
           <button className="ghost-sm" onClick={() => setPublicView(null)} type="button">← Back</button>
-          <button className="ghost-sm" onClick={() => openAuth('signin')} type="button">Sign In</button>
-          <button className="cta-sm" onClick={() => openAuth('signup')} type="button">Get Started</button>
+          <button className="ghost-sm" onClick={() => openAuth('login')} type="button">Login</button>
+          <button className="cta-sm" onClick={() => openAuth('register')} type="button">Register</button>
           <button className="theme-sq" onClick={toggleTheme} type="button" aria-label="Toggle theme">{theme === 'light' ? '☾' : '☀'}</button>
         </div>
       </nav>
@@ -715,7 +754,7 @@ export default function App() {
         </header>
         <PublicPageContent view={publicView} />
       </div>
-      <LandingFooter navigateToView={() => {}} openAuth={openAuth} openPublicView={v => setPublicView(v)} />
+      <LandingFooter openAuth={openAuth} openPublicView={v => setPublicView(v)} />
     </main>
   )
 
@@ -727,8 +766,8 @@ export default function App() {
           <span className="brand-name">SmartCRM</span>
         </div>
         <div className="landing-nav-actions">
-          <button className="ghost-sm" onClick={() => openAuth('signin')} type="button">Sign In</button>
-          <button className="cta-sm" onClick={() => openAuth('signup')} type="button">Get Started</button>
+          <button className="ghost-sm" onClick={() => openAuth('login')} type="button">Login</button>
+          <button className="cta-sm" onClick={() => openAuth('register')} type="button">Register</button>
           <button className="theme-sq" onClick={toggleTheme} type="button" aria-label="Toggle theme">{theme === 'light' ? '☾' : '☀'}</button>
         </div>
       </nav>
@@ -741,8 +780,8 @@ export default function App() {
           <h1>Close more deals with<br />smarter pipeline control</h1>
           <p className="hero-desc">SmartCRM unifies lead tracking, pipeline stages, follow-up reminders, communication logs, and AI-powered insights in one clean workspace.</p>
           <div className="hero-actions">
-            <button className="cta-lg" onClick={() => openAuth('signup')} type="button">Start for Free</button>
-            <button className="ghost-lg" onClick={() => openAuth('signin')} type="button">Sign In</button>
+            <button className="cta-lg" onClick={() => openAuth('register')} type="button">Register for Free</button>
+            <button className="ghost-lg" onClick={() => openAuth('login')} type="button">Login</button>
           </div>
           <div className="trust-pills">
             <span>✓ Real-time data sync</span>
@@ -769,7 +808,7 @@ export default function App() {
           </div>
         </div>
       </section>
-      <LandingFooter navigateToView={navigateToView} openAuth={openAuth} openPublicView={v => setPublicView(v)} />
+      <LandingFooter openAuth={openAuth} openPublicView={v => setPublicView(v)} />
     </main>
   )
 
@@ -793,32 +832,32 @@ export default function App() {
             <span className="brand-name">SmartCRM</span>
           </div>
           <div className="auth-tabs">
-            <button className={`auth-tab${authMode === 'signin' ? ' active' : ''}`} onClick={() => { setAuthMode('signin'); setAuthError('') }} type="button">Sign In</button>
-            <button className={`auth-tab${authMode === 'signup' ? ' active' : ''}`} onClick={() => { setAuthMode('signup'); setAuthError('') }} type="button">Create Account</button>
+            <button className={`auth-tab${authMode === 'login' ? ' active' : ''}`} onClick={() => { setAuthMode('login'); setAuthError('') }} type="button">Login</button>
+            <button className={`auth-tab${authMode === 'register' ? ' active' : ''}`} onClick={() => { setAuthMode('register'); setAuthError('') }} type="button">Register</button>
           </div>
 
-          {authMode === 'signin' ? (<>
+          {authMode === 'login' ? (<>
             <h1 className="auth-title">Welcome back</h1>
-            <p className="auth-subtitle">Sign in to access your workspace.</p>
-            <form onSubmit={onSignIn} className="auth-form">
+            <p className="auth-subtitle">Login to access your workspace.</p>
+            <form onSubmit={onLogin} className="auth-form">
               <label>Email Address<input value={loginForm.username} onChange={e => setLoginForm(p => ({ ...p, username: e.target.value }))} placeholder="you@company.com" type="email" required /></label>
               <label>Password<input type="password" value={loginForm.password} onChange={e => setLoginForm(p => ({ ...p, password: e.target.value }))} placeholder="Your password" required /></label>
               {authError && <p className="error">{authError}</p>}
-              <button className="cta full-btn" disabled={busy} type="submit">{busy ? 'Signing in…' : 'Sign In'}</button>
+              <button className="cta full-btn" disabled={busy} type="submit">{busy ? 'Logging in…' : 'Login'}</button>
             </form>
-            <p className="auth-switch">No account? <button type="button" onClick={() => { setAuthMode('signup'); setAuthError('') }}>Create one free →</button></p>
+            <p className="auth-switch">No account? <button type="button" onClick={() => { setAuthMode('register'); setAuthError('') }}>Register one free →</button></p>
           </>) : (<>
             <h1 className="auth-title">Create your account</h1>
-            <p className="auth-subtitle">Free to start - no credit card needed.</p>
-            <form onSubmit={onSignUp} className="auth-form">
+            <p className="auth-subtitle">Free to start - register in seconds.</p>
+            <form onSubmit={onRegister} className="auth-form">
               <label>Full Name<input value={signupForm.username} onChange={e => setSignupForm(p => ({ ...p, username: e.target.value }))} placeholder="Your name" required /></label>
               <label>Email Address<input type="email" value={signupForm.email} onChange={e => setSignupForm(p => ({ ...p, email: e.target.value }))} placeholder="you@company.com" required /></label>
               <label>Password<input type="password" value={signupForm.password} onChange={e => setSignupForm(p => ({ ...p, password: e.target.value }))} placeholder="At least 6 characters" required /></label>
               <label>Confirm Password<input type="password" value={signupForm.confirm_password} onChange={e => setSignupForm(p => ({ ...p, confirm_password: e.target.value }))} placeholder="Re-enter password" required /></label>
               {authError && <p className="error">{authError}</p>}
-              <button className="cta full-btn" disabled={busy} type="submit">{busy ? 'Creating account…' : 'Create Account'}</button>
+              <button className="cta full-btn" disabled={busy} type="submit">{busy ? 'Registering…' : 'Register'}</button>
             </form>
-            <p className="auth-switch">Have an account? <button type="button" onClick={() => { setAuthMode('signin'); setAuthError('') }}>Sign in →</button></p>
+            <p className="auth-switch">Have an account? <button type="button" onClick={() => { setAuthMode('login'); setAuthError('') }}>Login →</button></p>
           </>)}
         </div>
       </div>
