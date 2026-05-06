@@ -496,6 +496,8 @@ export default function App() {
   }, [screen, view, authMode])
 
   // ── Auth listener ──────────────────────────────────────────────────────
+  const initRef = useRef(false)
+
   useEffect(() => {
     return authApi.onAuthChange(firebaseUser => {
       if (firebaseUser) {
@@ -510,6 +512,8 @@ export default function App() {
         setAuthMode(pubState.authMode);
         setPublicView(pubState.publicView);
       }
+      // Mark init complete after first auth callback
+      initRef.current = true
     })
   }, [])
 
@@ -540,8 +544,9 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [user])
 
+  // Sync URL hash to match current app state (only after auth init)
   useEffect(() => {
-    if (screen === 'loading') return
+    if (!initRef.current) return
     let nextHash = '#/'
     if (screen === 'workspace') {
       nextHash = `#/${view}`
