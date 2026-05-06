@@ -467,8 +467,13 @@
 }
 
 .l-footer-socials { display: flex; gap: 1.25rem; }
-.l-footer-socials span { cursor: pointer; transition: color 0.2s; }
-.l-footer-socials span:hover { color: var(--text); }
+.l-footer-socials span,
+.l-footer-socials a {
+  cursor: pointer; transition: color 0.2s;
+  color: var(--muted-2); text-decoration: none; font-size: 0.84rem;
+}
+.l-footer-socials span:hover,
+.l-footer-socials a:hover { color: var(--text); }
 
 @media (max-width: 900px) {
   .l-footer-top { grid-template-columns: 1fr; gap: 3rem; }
@@ -736,7 +741,27 @@
   animation: parallaxDrift 9s ease-in-out infinite;
 }
 
-/* ── Page header ──────────────────────────────────────────────── */
+/* ── Public pages (about / privacy / support) ──────────────────────
+   Full-width, responsive — no fixed 760px / 900px caps.
+   Works at all viewports: mobile, tablet, desktop, widescreen.
+   ─────────────────────────────────────────────────────────────────── */
+.pub-page-crm {
+  width: min(1180px, 100%);
+  flex: 1;
+  padding-top: 2.5rem;
+  align-content: start;
+}
+
+.pub-page-body {
+  width: 100%;
+  padding: 2rem clamp(1rem, 3vw, 2.5rem);
+}
+
+@media (max-width: 600px) {
+  .pub-page-body { padding: 1.25rem 1rem; }
+}
+
+
 .page-hdr {
   display: flex; justify-content: space-between; align-items: center; gap: 1rem;
 }
@@ -1024,6 +1049,9 @@ input, select, textarea {
   font-family: var(--sans); font-size: 0.875rem; width: 100%;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.4s;
   outline: none;
+  /* Inherit color-scheme so browser-native widgets (calendar, spinner)
+     render with the correct light/dark icon automatically */
+  color-scheme: inherit;
 }
 select { cursor: pointer; }
 input:focus, select:focus, textarea:focus {
@@ -1032,6 +1060,96 @@ input:focus, select:focus, textarea:focus {
   background: var(--surface);
 }
 textarea { resize: none; }
+
+/* \u2500\u2500 Date / time inputs \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+   KEY: -webkit-datetime-edit-text is the separator dashes between dd/mm/yyyy.
+   If it is unstyled, only the dashes show in dark mode (the "----" bug).
+   We must style EVERY pseudo-element of the date input explicitly.
+   \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"] {
+  color-scheme: light;
+  padding-right: 0.4rem;
+}
+
+/* Outer edit container */
+input[type="date"]::-webkit-datetime-edit,
+input[type="datetime-local"]::-webkit-datetime-edit {
+  color: var(--text);
+  padding: 0;
+}
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+  background: transparent;
+  color: var(--text);
+}
+
+/* THE FIX: separator dashes/slashes between dd, mm, yyyy */
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="datetime-local"]::-webkit-datetime-edit-text {
+  color: var(--muted);
+  padding: 0 1px;
+}
+
+/* Individual editable segments */
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-year-field,
+input[type="datetime-local"]::-webkit-datetime-edit-day-field,
+input[type="datetime-local"]::-webkit-datetime-edit-month-field,
+input[type="datetime-local"]::-webkit-datetime-edit-year-field,
+input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
+input[type="datetime-local"]::-webkit-datetime-edit-minute-field,
+input[type="datetime-local"]::-webkit-datetime-edit-ampm-field {
+  color: var(--text);
+  background: transparent;
+  border-radius: 0.2rem;
+  padding: 0 1px;
+}
+input[type="date"]::-webkit-datetime-edit-day-field:focus,
+input[type="date"]::-webkit-datetime-edit-month-field:focus,
+input[type="date"]::-webkit-datetime-edit-year-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-day-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-month-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-year-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-hour-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-minute-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-ampm-field:focus {
+  background: var(--accent-light);
+  color: var(--accent);
+  outline: none;
+}
+
+/* Calendar icon */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  opacity: 0.65;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  padding: 2px;
+  transition: opacity 0.2s, filter 0.2s;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* ── Dark theme date inputs ────────────────────────────────────────
+   We keep color-scheme: light on ALL date inputs (declared above).
+   This means Chrome renders a dark/black calendar icon on all inputs.
+   In dark mode we INVERT that icon to make it white — simple & reliable.
+   Do NOT set color-scheme: dark here — it would fight the filter.
+   ─────────────────────────────────────────────────────────────────── */
+:root[data-theme='dark'] input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-theme='dark'] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+:root[data-theme='dark'] input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.9);
+  opacity: 0.8;
+}
 
 /* Placeholder */
 ::placeholder { color: var(--muted-2); }

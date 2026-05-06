@@ -250,7 +250,121 @@ function AppFooter({ navigateToView }) {
   )
 }
 
-function LandingFooter({ openAuth, navigateToView }) {
+
+// ─── Public page content (reused on landing + workspace) ──────────────────
+function PublicPageContent({ view }) {
+  return (
+    <section className="pub-page-body panel md-body">
+      {view === 'about' && (<>
+        <h2>Empowering Sales with Intelligence</h2>
+        <p>SmartCRM was built with a single mission: to transform the chaotic process of lead management into a streamlined, AI-driven engine for growth.</p>
+
+        <div className="metrics" style={{ margin: '2rem 0' }}>
+          <article>
+            <strong>Real-time</strong>
+            <p>Instant</p>
+            <small>Firebase Sync</small>
+          </article>
+          <article>
+            <strong>AI-Powered</strong>
+            <p>90%</p>
+            <small>Insight Accuracy</small>
+          </article>
+          <article>
+            <strong>Secure</strong>
+            <p>256-bit</p>
+            <small>AES Encryption</small>
+          </article>
+        </div>
+
+        <h3>The SmartCRM Advantage</h3>
+        <p>Traditional CRMs are often glorified spreadsheets — clunky, slow, and reactive. SmartCRM is proactive. By integrating deep learning via Hugging Face AI, we provide context that others miss.</p>
+
+        <div className="stat-list" style={{ marginTop: '1.5rem' }}>
+          <li style={{ animation: 'none' }}>
+            <div className="stat-row"><strong>Dynamic Pipeline</strong></div>
+            <p className="muted small">Visualise your sales funnel with drag-and-drop precision and real-time stage updates.</p>
+          </li>
+          <li style={{ animation: 'none' }}>
+            <div className="stat-row"><strong>AI Assistant</strong></div>
+            <p className="muted small">Generate follow-up drafts, summarize negotiation transcripts, and predict deal outcomes.</p>
+          </li>
+          <li style={{ animation: 'none' }}>
+            <div className="stat-row"><strong>Task Intelligence</strong></div>
+            <p className="muted small">Never miss a follow-up with contextual reminders that sync across all your devices.</p>
+          </li>
+        </div>
+      </>)}
+
+      {view === 'privacy' && (<>
+        <h2>Privacy &amp; Data Security</h2>
+        <p>At SmartCRM, we believe your data is your most valuable asset. Our privacy framework is built on transparency and security-first architecture.</p>
+
+        <div className="md-body">
+          <h3>1. Data Sovereignty</h3>
+          <p>Your lead data, contact logs, and internal notes are stored in dedicated Firebase Firestore instances. We utilize industry-standard security rules to ensure only authorized team members can access your workspace.</p>
+
+          <h3>2. AI Processing Transparency</h3>
+          <p>When you use the AI Assistant, we process your anonymized pipeline data through secure API endpoints. We do not use your proprietary sales data to train public models. Your competitive advantage remains yours.</p>
+
+          <h3>3. Encryption &amp; Access</h3>
+          <p>All data in transit is encrypted via SSL/TLS. Authentication is managed through Firebase Auth, supporting multi-factor authentication and secure token-based sessions.</p>
+
+          <div className="panel" style={{ background: 'var(--accent-light)', border: '1px solid var(--accent)', marginTop: '2rem' }}>
+            <p style={{ margin: 0, color: 'var(--accent)', fontWeight: 600 }}>SmartCRM is committed to GDPR and CCPA compliance standards for all users.</p>
+          </div>
+        </div>
+      </>)}
+
+      {view === 'support' && (<>
+        <h2>Contact &amp; Support</h2>
+        <p>
+          Have a question, found a bug, or need help with your pipeline? We&#39;re here to help.
+          Reach out directly and our team will get back to you as soon as possible.
+        </p>
+
+        <div className="panel" style={{ marginTop: '2rem', background: 'var(--accent-light)', border: '1px solid var(--accent)' }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: 'var(--accent)' }}>
+            📧 <a href="mailto:crmlead123@gmail.com" style={{ color: 'var(--accent)', textDecoration: 'none' }}>crmlead123@gmail.com</a>
+          </p>
+          <p style={{ margin: '0.4rem 0 0', color: 'var(--muted)', fontSize: '0.875rem' }}>
+            We typically respond within a few hours during business days.
+          </p>
+        </div>
+
+        <h3 style={{ marginTop: '2.5rem' }}>How We Can Help</h3>
+        <div className="stat-list" style={{ marginTop: '1rem' }}>
+          <li style={{ animation: 'none' }}>
+            <div className="stat-row"><strong>Technical Issues</strong></div>
+            <p className="muted small">Bugs, broken features, login problems, or data sync issues — send us a detailed description and we&#39;ll investigate promptly.</p>
+          </li>
+          <li style={{ animation: 'none' }}>
+            <div className="stat-row"><strong>Feature Requests</strong></div>
+            <p className="muted small">Have an idea that would make SmartCRM better for your team? We&#39;d love to hear it. Your feedback shapes the product roadmap.</p>
+          </li>
+          <li style={{ animation: 'none' }}>
+            <div className="stat-row"><strong>Account &amp; Billing</strong></div>
+            <p className="muted small">Questions about your account, data privacy, or access management? Email us and we&#39;ll sort it out securely.</p>
+          </li>
+          <li style={{ animation: 'none' }}>
+            <div className="stat-row"><strong>Getting Started</strong></div>
+            <p className="muted small">New to SmartCRM? We can walk you through setting up your pipeline, AI assistant, and reminders to hit the ground running.</p>
+          </li>
+        </div>
+
+        <div className="panel" style={{ marginTop: '2.5rem' }}>
+          <h3 style={{ marginBottom: '0.75rem' }}>Working Hours</h3>
+          <p className="muted small">Monday – Friday, 9 AM – 6 PM IST. We aim to respond to all queries within the same business day.</p>
+          <p className="muted small" style={{ marginTop: '0.5rem' }}>For urgent issues, prefix your email subject with <strong style={{ color: 'var(--accent)' }}>[URGENT]</strong> and we&#39;ll prioritise it.</p>
+        </div>
+      </>)}
+    </section>
+  )
+}
+
+function LandingFooter({ openAuth, navigateToView, openPublicView }) {
+  // Social links configured via VITE_SOCIAL_* env vars (optional)
+
   return (
     <footer className="landing-footer">
       <div className="l-footer-top">
@@ -266,33 +380,30 @@ function LandingFooter({ openAuth, navigateToView }) {
             <h4>Product</h4>
             <span onClick={() => openAuth('signup')}>Features</span>
             <span onClick={() => openAuth('signup')}>AI Assistant</span>
-            <span onClick={() => openAuth('signup')}>Pricing</span>
+            <span onClick={() => openAuth('signup')}>Get Started</span>
           </div>
           <div className="l-footer-col">
             <h4>Company</h4>
-            <span onClick={() => navigateToView('about')}>About Us</span>
-            <span onClick={() => navigateToView('support')}>Contact</span>
-            <span onClick={() => navigateToView('support')}>Careers</span>
+            <span onClick={() => openPublicView('about')}>About Us</span>
+            <span onClick={() => openPublicView('support')}>Contact</span>
+            <span onClick={() => openPublicView('privacy')}>Privacy Policy</span>
           </div>
           <div className="l-footer-col">
             <h4>Support</h4>
-            <span onClick={() => navigateToView('support')}>Help Center</span>
-            <span onClick={() => navigateToView('privacy')}>Privacy Policy</span>
-            <span onClick={() => navigateToView('support')}>Security</span>
+            <span onClick={() => openPublicView('support')}>Help Center</span>
+            <span onClick={() => openPublicView('support')}>Security</span>
+            <span onClick={() => openPublicView('privacy')}>Terms of Service</span>
           </div>
         </div>
       </div>
       <div className="l-footer-bottom">
-        <p>© {new Date().getFullYear()} SmartCRM Inc. Built for high-performance sales teams.</p>
-        <div className="l-footer-socials">
-          <span>Twitter</span>
-          <span>LinkedIn</span>
-          <span>GitHub</span>
-        </div>
+        <p>© {new Date().getFullYear()} SmartCRM. Built for high-performance sales teams.</p>
+        
       </div>
     </footer>
   )
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN APP
@@ -307,6 +418,7 @@ export default function App() {
   const [authError, setAuthError] = useState('')
   const [busy, setBusy] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [publicView, setPublicView] = useState(null) // 'about'|'privacy'|'support' shown on landing
 
   const [allLeads, setAllLeads] = useState([])
   const [leadsLoading, setLeadsLoading] = useState(false)
@@ -580,6 +692,33 @@ export default function App() {
     </div>
   )
 
+  if (screen === 'landing' && publicView) return (
+    <main className="landing-page" style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
+      <nav className="landing-nav">
+        <div className="brand-row">
+          <span className="brand-logo">S</span>
+          <span className="brand-name">SmartCRM</span>
+        </div>
+        <div className="landing-nav-actions">
+          <button className="ghost-sm" onClick={() => setPublicView(null)} type="button">← Back</button>
+          <button className="ghost-sm" onClick={() => openAuth('signin')} type="button">Sign In</button>
+          <button className="cta-sm" onClick={() => openAuth('signup')} type="button">Get Started</button>
+          <button className="theme-sq" onClick={toggleTheme} type="button" aria-label="Toggle theme">{theme === 'light' ? '☾' : '☀'}</button>
+        </div>
+      </nav>
+      <div className="crm pub-page-crm">
+        <header className="page-hdr panel">
+          <div>
+            <h1 style={{ textTransform: 'capitalize' }}>{publicView}</h1>
+            <p className="muted">SmartCRM {publicView} information.</p>
+          </div>
+        </header>
+        <PublicPageContent view={publicView} />
+      </div>
+      <LandingFooter navigateToView={() => {}} openAuth={openAuth} openPublicView={v => setPublicView(v)} />
+    </main>
+  )
+
   if (screen === 'landing') return (
     <main className="landing-page">
       <nav className="landing-nav">
@@ -630,7 +769,7 @@ export default function App() {
           </div>
         </div>
       </section>
-      <LandingFooter navigateToView={navigateToView} openAuth={openAuth} />
+      <LandingFooter navigateToView={navigateToView} openAuth={openAuth} openPublicView={v => setPublicView(v)} />
     </main>
   )
 
@@ -898,102 +1037,7 @@ export default function App() {
     if (view === 'about' || view === 'privacy' || view === 'support') return (
       <main className="crm">
         <header className="page-hdr panel"><div><h1 style={{ textTransform: 'capitalize' }}>{view}</h1><p className="muted">SmartCRM {view} information.</p></div></header>
-        <section className="panel md-body" style={{ maxWidth: '760px', padding: '2rem' }}>
-          {view === 'about' && (<>
-            <h2>Empowering Sales with Intelligence</h2>
-            <p>SmartCRM was built with a single mission: to transform the chaotic process of lead management into a streamlined, AI-driven engine for growth.</p>
-            
-            <div className="metrics" style={{ margin: '2rem 0' }}>
-              <article>
-                <strong>Real-time</strong>
-                <p>Instant</p>
-                <small>Firebase Sync</small>
-              </article>
-              <article>
-                <strong>AI-Powered</strong>
-                <p>90%</p>
-                <small>Insight Accuracy</small>
-              </article>
-              <article>
-                <strong>Secure</strong>
-                <p>256-bit</p>
-                <small>AES Encryption</small>
-              </article>
-            </div>
-
-            <h3>The SmartCRM Advantage</h3>
-            <p>Traditional CRMs are often glorified spreadsheets—clunky, slow, and reactive. SmartCRM is proactive. By integrating deep learning via Hugging Face AI, we provide context that others miss.</p>
-            
-            <div className="stat-list" style={{ marginTop: '1.5rem' }}>
-              <li style={{ animation: 'none' }}>
-                <div className="stat-row"><strong>Dynamic Pipeline</strong></div>
-                <p className="muted small">Visualise your sales funnel with drag-and-drop precision and real-time stage updates.</p>
-              </li>
-              <li style={{ animation: 'none' }}>
-                <div className="stat-row"><strong>AI Assistant</strong></div>
-                <p className="muted small">Generate follow-up drafts, summarize negotiation transcripts, and predict deal outcomes.</p>
-              </li>
-              <li style={{ animation: 'none' }}>
-                <div className="stat-row"><strong>Task Intelligence</strong></div>
-                <p className="muted small">Never miss a follow-up with contextual reminders that sync across all your devices.</p>
-              </li>
-            </div>
-          </>)}
-          {view === 'privacy' && (<>
-            <h2>Privacy & Data Security</h2>
-            <p>At SmartCRM, we believe your data is your most valuable asset. Our privacy framework is built on transparency and security-first architecture.</p>
-            
-            <div className="md-body">
-              <h3>1. Data Sovereignty</h3>
-              <p>Your lead data, contact logs, and internal notes are stored in dedicated Firebase Firestore instances. We utilize industry-standard security rules to ensure only authorized team members can access your workspace.</p>
-              
-              <h3>2. AI Processing Transparency</h3>
-              <p>When you use the AI Assistant, we process your anonymized pipeline data through secure API endpoints. We do not use your proprietary sales data to train public models. Your competitive advantage remains yours.</p>
-              
-              <h3>3. Encryption & Access</h3>
-              <p>All data in transit is encrypted via SSL/TLS. Authentication is managed through Firebase Auth, supporting multi-factor authentication and secure token-based sessions.</p>
-              
-              <div className="panel" style={{ background: 'var(--accent-light)', border: '1px solid var(--accent)', marginTop: '2rem' }}>
-                <p style={{ margin: 0, color: 'var(--accent)', fontWeight: 600 }}>SmartCRM is committed to GDPR and CCPA compliance standards for all users.</p>
-              </div>
-            </div>
-          </>)}
-          {view === 'support' && (<>
-            <h2>Contact & Support</h2>
-            <p>Our team is here to help you maximize your sales productivity. Reach out to us via the form below or at <strong>support@smartcrm.com</strong>.</p>
-            
-            <form className="form-grid" style={{ marginTop: '2rem' }} onSubmit={e => { e.preventDefault(); alert('Message sent! Our team will get back to you soon.') }}>
-              <label>Your Name<input placeholder="Full Name" required /></label>
-              <label>Email Address<input type="email" placeholder="you@company.com" required /></label>
-              <label className="full">Subject
-                <select>
-                  <option>Technical Support</option>
-                  <option>Sales Inquiry</option>
-                  <option>Billing Question</option>
-                  <option>Feature Request</option>
-                  <option>Other</option>
-                </select>
-              </label>
-              <label className="full">Message
-                <textarea rows="5" placeholder="How can we help you?" required />
-              </label>
-              <div className="row-actions full">
-                <button className="cta" type="submit">Send Message</button>
-              </div>
-            </form>
-
-            <div style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
-              <div>
-                <strong>Office HQ</strong>
-                <p className="muted small">123 Tech Park, Suite 400<br />Bangalore, KA 560001</p>
-              </div>
-              <div>
-                <strong>Working Hours</strong>
-                <p className="muted small">Mon - Fri: 9:00 AM - 6:00 PM IST<br />Response time: &lt; 4 hours</p>
-              </div>
-            </div>
-          </>)}
-        </section>
+        <PublicPageContent view={view} />
       </main>
     )
 

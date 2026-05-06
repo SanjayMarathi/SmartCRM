@@ -8,6 +8,9 @@
   --sans: 'Inter', 'Segoe UI', sans-serif;
   --mono: 'IBM Plex Mono', 'Courier New', monospace;
 
+  /* Native browser controls (date pickers, scrollbars) */
+  color-scheme: light;
+
   /* Surfaces */
   --bg:         #f0f2f5;
   --surface:    #ffffff;
@@ -76,6 +79,9 @@
    Matches OripioFin dark sidebar reference
    ═══════════════════════════════════════════════ */
 :root[data-theme='dark'] {
+  /* Native browser controls rendered in dark mode */
+  color-scheme: dark;
+
   /* Surfaces */
   --bg:         #000000;
   --surface:    #0a0a0a;
