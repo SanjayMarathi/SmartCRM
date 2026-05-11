@@ -11,17 +11,17 @@ const VIEW_ORDER = ['pipeline', 'create', 'edit', 'reports', 'reminders', 'logs'
 // All route names used across screens (public + workspace)
 const ALL_ROUTES = new Set([...WORKSPACE_VIEWS, 'login', 'register'])
 
-function getHashRoute() {
-  return (window.location.hash || '').replace(/^#\/?/, '')
+function getPathRoute() {
+  return (window.location.pathname || '/').replace(/^\/+/, '')
 }
 
-function getViewFromHash() {
-  const route = getHashRoute()
+function getViewFromPath() {
+  const route = getPathRoute()
   return WORKSPACE_VIEWS.has(route) ? route : 'pipeline'
 }
 
 function getInitialPublicState() {
-  const route = getHashRoute()
+  const route = getPathRoute()
   if (route === 'login') return { screen: 'auth', authMode: 'login', publicView: null }
   if (route === 'register') return { screen: 'auth', authMode: 'register', publicView: null }
   if (['about', 'privacy', 'support'].includes(route)) return { screen: 'landing', authMode: 'login', publicView: route }
@@ -426,7 +426,7 @@ function LandingFooter({ openAuth, openPublicView }) {
 export default function App() {
   const [theme, setTheme] = useState('dark')
   const [screen, setScreen] = useState('loading')
-  const [view, setView] = useState(getViewFromHash)
+  const [view, setView] = useState(getViewFromPath)
   const [viewAnim, setViewAnim] = useState('flip-forward')
   const [user, setUser] = useState(null)
   const [authMode, setAuthMode] = useState('login')
@@ -502,7 +502,7 @@ export default function App() {
     return authApi.onAuthChange(firebaseUser => {
       if (firebaseUser) {
         setUser({ id: firebaseUser.uid, username: firebaseUser.displayName || firebaseUser.email?.split('@')[0], email: firebaseUser.email })
-        setView(getViewFromHash())
+        setView(getViewFromPath())
         setScreen('workspace')
         startLeadsSubscription()
       } else {
@@ -517,10 +517,10 @@ export default function App() {
     })
   }, [])
 
-  // ── Hash routing ───────────────────────────────────────────────────────
+  // ── Path routing ───────────────────────────────────────────────────────
   useEffect(() => {
-    const handleHashChange = () => {
-      const route = getHashRoute()
+    const handlePopState = () => {
+      const route = getPathRoute()
       if (user) {
         // Logged in: workspace views
         if (WORKSPACE_VIEWS.has(route)) {
@@ -540,23 +540,23 @@ export default function App() {
         setPublicView(pubState.publicView)
       }
     }
-    window.addEventListener('hashchange', handleHashChange)
-    return () => window.removeEventListener('hashchange', handleHashChange)
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
   }, [user])
 
-  // Sync URL hash to match current app state (only after auth init)
+  // Sync URL path to match current app state (only after auth init)
   useEffect(() => {
     if (!initRef.current) return
-    let nextHash = '#/'
+    let nextPath = '/'
     if (screen === 'workspace') {
-      nextHash = `#/${view}`
+      nextPath = `/${view}`
     } else if (screen === 'auth') {
-      nextHash = authMode === 'login' ? '#/login' : '#/register'
+      nextPath = authMode === 'login' ? '/login' : '/register'
     } else if (screen === 'landing') {
-      nextHash = publicView ? `#/${publicView}` : '#/'
+      nextPath = publicView ? `/${publicView}` : '/'
     }
-    if (window.location.hash !== nextHash) {
-      window.history.pushState(null, '', nextHash)
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState(null, '', nextPath)
     }
   }, [screen, view, authMode, publicView])
 
